@@ -9,34 +9,37 @@
 #include "expr.h"
 
 /***************************************************************
- * Function Name: 
+ * Function Name: initRecordManager 
  *
- * Description: 
+ * Description: initial record manager
  *
- * Parameters: 
+ * Parameters: void *mgmtData
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      2016/03/12      Xiaoliang Wu                Complete
  *
 ***************************************************************/
 
 RC initRecordManager (void *mgmtData){
+    printf("----------------------------- Initial Record Manager ---------------------------------\n");
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: shutdownRecordManager 
  *
- * Description: 
+ * Description: shutdown record manager 
  *
- * Parameters: 
+ * Parameters: NULL
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
@@ -44,18 +47,20 @@ RC initRecordManager (void *mgmtData){
 ***************************************************************/
 
 RC shutdownRecordManager (){
+    printf("-------------------------------- shutdown record manager ---------------------------------\n");
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: createTable 
  *
- * Description: 
+ * Description: Creating a table should create the underlying page file and store information about the schema, free-space, ... and so on in the Table Information pages
  *
- * Parameters: 
+ * Parameters: char *name, Schema *schema
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
