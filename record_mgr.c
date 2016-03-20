@@ -437,7 +437,7 @@ int getRecordSize (Schema *schema)
 				break;
 			case DT_BOOL:
 				result+=sizeof(bool);
-                                                                break;
+				break;
 			case DT_STRING:
 				result+=schema->typeLength[i];
 				break;
