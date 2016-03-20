@@ -188,15 +188,15 @@ RC createTable (char *name, Schema *schema){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: openTable
  *
- * Description: 
+ * Description: open a table
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel, char *name
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
@@ -207,15 +207,15 @@ RC openTable (RM_TableData *rel, char *name){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: closeTable
  *
- * Description: 
+ * Description: close a table
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
@@ -226,22 +226,24 @@ RC closeTable (RM_TableData *rel){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: deleteTable
  *
- * Description: 
+ * Description: delete a table
  *
- * Parameters: 
+ * Parameters: char *name
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      03/19/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 RC deleteTable (char *name){
+    return destroyPageFile(name);
 }
 
 /***************************************************************
