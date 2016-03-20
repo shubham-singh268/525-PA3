@@ -64,10 +64,127 @@ RC shutdownRecordManager (){
  *
  * History:
  *      Date            Name                        Content
+ *      03/19/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 RC createTable (char *name, Schema *schema){
+    RC RC_flag;
+    SM_FileHandle fh;
+    SM_PageHandle ph;
+    int numAttr, keySize;
+    int fileMetadataSize;
+    Value *fMetadataSize;
+    Value *recordSize;
+    Value *slotSize;
+    Value *recordNum;
+    char *input, *pageMetadataInput;
+    int pageMetadataNum;
+    Value *pageNum, *capacityFlag;
+
+    int i,j,k;
+
+    RC_flag = createPageFile(name);
+
+    if(RC_flag != RC_OK){
+        return RC_flag;
+    }
+
+    RC_flag = openPageFile(name, &fh);
+
+    if(RC_flag != RC_OK){
+        return RC_flag;
+    }
+
+    numAttr = schema->numAttr;
+    keySize = schema->keySize;
+
+    fileMetadataSize = (6 + numAttr + keySize)*sizeof(int) + numAttr*sizeof(char);
+
+    if(fileMetadataSize%PAGE_SIZE == 0){
+        fileMetadataSize = fileMetadataSize/PAGE_SIZE;
+    }
+    else{
+        fileMetadataSize = fileMetadataSize/PAGE_SIZE + 1;
+    }
+
+    fMetadataSize->dt = DT_INT;
+    fMetadataSize->v.intV = fileMetadataSize;
+    recordSize->dt = DT_INT;
+    recordSize->v.intV = getRecordSize(schema);
+    slotSize->dt = DT_INT;
+    slotSize->v.intV = 256;
+    recordNum->dt = DT_INT;
+    recordNum->v.intV = 0;
+
+    input = (char *)calloc(PAGE_SIZE, sizeof(char));
+
+    if(fileMetadataSize>1){
+        printf("file metadata size > 1.\n");
+        while(1){}
+    }
+
+    strcat(input,serializeValue(fMetadataSize));
+    strcat(input,serializeValue(recordSize));
+    strcat(input,serializeValue(slotSize));
+    strcat(input,serializeValue(recordNum));
+    strcat(input,serializeSchema(schema));
+
+    RC_flag = ensureCapacity(fileMetadataSize, &fh);
+    if(RC_flag != RC_OK){
+        RC_flag = closePageFile(&fh);
+        return RC_flag;
+    }
+
+    for (i = 0; i < fileMetadataSize; ++i) {
+        
+        ph = (SM_PageHandle)calloc(1,PAGE_SIZE);
+        for (k = 0, j = i*PAGE_SIZE; j < (i+1)*PAGE_SIZE; ++j, ++k) {
+            ph[k] = input[j];
+        }
+        ph[PAGE_SIZE] = '\0';
+        RC_flag = writeBlock(i,&fh,ph);
+        free(ph);
+        if(RC_flag != RC_OK){
+            RC_flag = closePageFile(&fh);
+            return RC_flag;
+        }
+    }
+    free(input);
+
+    RC_flag = appendEmptyBlock(&fh);
+    if(RC_flag != RC_OK){
+        RC_flag = closePageFile(&fh);
+        return RC_flag;
+    }
+
+    pageNum->dt = DT_INT;
+    pageNum->v.intV = 0;
+    capacityFlag->dt = DT_BOOL;
+    capacityFlag->v.boolV = 1;
+
+    pageMetadataNum = (strlen(serializeValue(pageNum)) + strlen(serializeValue(capacityFlag)))/PAGE_SIZE;
+
+    pageMetadataInput = (char *)calloc(1, PAGE_SIZE);
+
+    for (i = 0; i < pageMetadataNum; ++i) {
+        strcat(pageMetadataInput, serializeValue(pageNum)); 
+        strcat(pageMetadataInput, serializeValue(capacityFlag)); 
+        pageNum->v.intV = i+1;
+        if(i == pageMetadataNum-1){
+            capacityFlag->v.boolV = 0;
+            pageNum->v.intV = pageMetadataNum;
+        }
+    }
+    RC_flag = writeBlock(fileMetadataSize, &fh, ph);
+    if(RC_flag != RC_OK){
+        RC_flag = closePageFile(&fh);
+        return RC_flag;
+    }
+
+    free(pageMetadataInput);
+    RC_flag = closePageFile(&fh);
+    return RC_flag;
 }
 
 /***************************************************************
