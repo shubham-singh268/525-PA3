@@ -359,79 +359,130 @@ RC next (RM_ScanHandle *scan, Record *record){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: closeScan
  *
- * Description: 
+ * Description: free the memo space of this scan
  *
- * Parameters: 
+ * Parameters: RM_ScanHandle *scan
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ * 03/19/2016    liuzhipeng	first time to implement the function
 ***************************************************************/
 
-RC closeScan (RM_ScanHandle *scan){
+RC closeScan (RM_ScanHandle *scan)
+{
+	free(scan->rel);
+	free(mgmtData);
+	free(scan);
+
+	return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: getRecordSize	
  *
- * Description: 
+ * Description: get the size of record described by "schema"
  *
- * Parameters: 
+ * Parameters: Schema *schema
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ * 03/19/2016    liuzhipeng	first time to implement the function
 ***************************************************************/
 
-int getRecordSize (Schema *schema){
+int getRecordSize (Schema *schema)
+{
+	int i;
+	int result;
+
+	for(i=0;i<schema->numAttr;i++)
+	{
+		switch schema->dataTypes[i]
+		{
+			case DT_INT:
+				result+=sizeof(int);
+				break;
+			case DT_FLOAT:
+				result+=sizeof(float);
+				break;
+			case DT_BOLL:
+				result+=sizeof(bool);
+			case DT_STRING:
+				result+=schema->typeLength[i];
+				break;
+		}
+	}
+	return result;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: createSchema
  *
- * Description: 
+ * Description: create a new schema described by the parameters
  *
- * Parameters: 
+ * Parameters: int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys
  *
- * Return: 
+ * Return: Schema
  *
- * Author: 
+ * Author: liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ * 03/19/2016    liuzhipeng	first time to implement the function
 ***************************************************************/
 
-Schema *createSchema (int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys){
+Schema *createSchema (int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys)
+{
+	Schema *newschema=(Schema*)malloc(sizeof(Schema));
+
+	newschema->numAttr=numAttr;
+	newschema->attrNames=attrNames;
+	newschema->dataTypes=dataTypes;
+	newschema->typeLength=typeLength;
+	newschema->keySize=keySize;
+	newschema->keyAttrs=keys;
+
+	return newschema;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: freeSchema
  *
- * Description: 
+ * Description: free the memo space of this schema
  *
- * Parameters: 
+ * Parameters: Schema *schema
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ * 03/19/2016    liuzhipeng	first time to implement the function
 ***************************************************************/
 
-RC freeSchema (Schema *schema){
+RC freeSchema (Schema *schema)
+{
+	int i;
+
+	free(schema->keyAttrs);
+	free(schema->typeLength);
+	free(schema->dataTypes);
+	for(i=0;i<numAttr;i++)
+		free(schema->attrNames[i]);
+	free(schema->attrNames);
+	free(schema);
+
+	return RC_OK;
 }
 
 /***************************************************************
