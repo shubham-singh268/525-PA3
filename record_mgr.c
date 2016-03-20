@@ -357,6 +357,27 @@ RC getRecord (RM_TableData *rel, RID id, Record *record){
  *
 ***************************************************************/
 
+RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
+{
+
+}
+
+/***************************************************************
+ * Function Name: 
+ *
+ * Description: 
+ *
+ * Parameters: 
+ *
+ * Return: 
+ *
+ * Author: 
+ *
+ * History:
+ *      Date            Name                        Content
+ *
+***************************************************************/
+
 RC next (RM_ScanHandle *scan, Record *record){
 }
 
@@ -379,7 +400,7 @@ RC next (RM_ScanHandle *scan, Record *record){
 RC closeScan (RM_ScanHandle *scan)
 {
 	free(scan->rel);
-	free(mgmtData);
+	free(scan->mgmtData);
 	free(scan);
 
 	return RC_OK;
@@ -408,7 +429,7 @@ int getRecordSize (Schema *schema)
 
 	for(i=0;i<schema->numAttr;i++)
 	{
-		switch schema->dataTypes[i]
+		switch (schema->dataTypes[i])
 		{
 			case DT_INT:
 				result+=sizeof(int);
@@ -416,8 +437,9 @@ int getRecordSize (Schema *schema)
 			case DT_FLOAT:
 				result+=sizeof(float);
 				break;
-			case DT_BOLL:
+			case DT_BOOL:
 				result+=sizeof(bool);
+				break;
 			case DT_STRING:
 				result+=schema->typeLength[i];
 				break;
@@ -479,7 +501,7 @@ RC freeSchema (Schema *schema)
 	free(schema->keyAttrs);
 	free(schema->typeLength);
 	free(schema->dataTypes);
-	for(i=0;i<numAttr;i++)
+	for(i=0;i<schema->numAttr;i++)
 		free(schema->attrNames[i]);
 	free(schema->attrNames);
 	free(schema);
