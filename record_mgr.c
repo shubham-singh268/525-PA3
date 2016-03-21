@@ -110,10 +110,10 @@ RC createTable (char *name, Schema *schema){
 
     fMetadataSize->dt = DT_INT;
     fMetadataSize->v.intV = fileMetadataSize;
-    recordSize->dt = DT_INT;
-    recordSize->v.intV = getRecordSize(schema);
     slotSize->dt = DT_INT;
     slotSize->v.intV = 256;
+    recordSize->dt = DT_INT;
+    recordSize->v.intV = (getRecordSize(schema)/(slotSize->v.intV));
     recordNum->dt = DT_INT;
     recordNum->v.intV = 0;
 
@@ -188,15 +188,15 @@ RC createTable (char *name, Schema *schema){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: openTable
  *
- * Description: 
+ * Description: open a table
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel, char *name
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
@@ -207,15 +207,15 @@ RC openTable (RM_TableData *rel, char *name){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: closeTable
  *
- * Description: 
+ * Description: close a table
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
@@ -223,37 +223,43 @@ RC openTable (RM_TableData *rel, char *name){
 ***************************************************************/
 
 RC closeTable (RM_TableData *rel){
+    freeSchema(rel->schema);
+
+    //free other things.
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: deleteTable
  *
- * Description: 
+ * Description: delete a table
  *
- * Parameters: 
+ * Parameters: char *name
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      03/19/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 RC deleteTable (char *name){
+    return destroyPageFile(name);
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: getNumTuples
  *
- * Description: 
+ * Description: get the number of record
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
