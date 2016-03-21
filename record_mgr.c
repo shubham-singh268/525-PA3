@@ -611,11 +611,11 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value){
 			memcpy(&((*value)->v.boolV), record->data+offset, sizeof(int));
 			break;
 		case DT_STRING:
-            //We need append \0 in the end of string.
-            char end = '\0';
-            (*value)->v.stringV = (char *)malloc(schema->typeLength[attrNum] + 1);
-            memcpy((*value)->v.stringV, record->data+offset, schema->typeLength[attrNum]);
-            memcpy((*value)->v.stringV+schema->typeLength[attrNum], &end, 1);
+			//We need append \0 in the end of string.
+			char end = '\0';
+			(*value)->v.stringV = (char *)malloc(schema->typeLength[attrNum] + 1);
+			memcpy((*value)->v.stringV, record->data+offset, schema->typeLength[attrNum]);
+			memcpy((*value)->v.stringV+schema->typeLength[attrNum], &end, 1);
 			break;
 	}
     
@@ -672,12 +672,12 @@ RC setAttr (Record *record, Schema *schema, int attrNum, Value *value){
 			memcpy(record->data+offset, &(value->v.boolV), sizeof(int));
 			break;
 		case DT_STRING:
-            // We need to calculate the strlen of the input string.
-            if(strlen(value->v.stringV) >= schema->typeLength[attrNum]){
-                memcpy(record->data + offset, value->v.stringV, schema->typeLength[attrNum]);
-            } else {
-                strcpy(record->data+offset, value->v.stringV);
-            }
+			// We need to calculate the strlen of the input string.
+			if(strlen(value->v.stringV) >= schema->typeLength[attrNum]){
+				memcpy(record->data + offset, value->v.stringV, schema->typeLength[attrNum]);
+			} else {
+				strcpy(record->data+offset, value->v.stringV);
+			}
 			break;
 	}
 	
