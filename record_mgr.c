@@ -110,10 +110,10 @@ RC createTable (char *name, Schema *schema){
 
     fMetadataSize->dt = DT_INT;
     fMetadataSize->v.intV = fileMetadataSize;
-    recordSize->dt = DT_INT;
-    recordSize->v.intV = getRecordSize(schema);
     slotSize->dt = DT_INT;
     slotSize->v.intV = 256;
+    recordSize->dt = DT_INT;
+    recordSize->v.intV = (getRecordSize(schema)/(slotSize->v.intV));
     recordNum->dt = DT_INT;
     recordNum->v.intV = 0;
 
@@ -223,6 +223,10 @@ RC openTable (RM_TableData *rel, char *name){
 ***************************************************************/
 
 RC closeTable (RM_TableData *rel){
+    freeSchema(rel->schema);
+
+    //free other things.
+    return RC_OK;
 }
 
 /***************************************************************
@@ -247,15 +251,15 @@ RC deleteTable (char *name){
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: getNumTuples
  *
- * Description: 
+ * Description: get the number of record
  *
- * Parameters: 
+ * Parameters: RM_TableData *rel
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
