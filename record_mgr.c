@@ -514,78 +514,173 @@ RC freeSchema (Schema *schema)
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: createRecord
  *
- * Description: 
+ * Description: Create a record by the schema
  *
- * Parameters: 
+ * Parameters: Record *record, Schema *schema
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC createRecord (Record **record, Schema *schema){
+    *record = (struct Record *)calloc(1, sizeof(struct Record)); 
+    (*record)->data = (char*)calloc(getRecordSize(schema), sizeof(char));
+    
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: freeRecord
  *
- * Description: 
+ * Description: Free the space of a record
  *
- * Parameters: 
+ * Parameters: Record *record
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC freeRecord (Record *record){
+    free(record->data);
+    free(record);
+    
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: getAttr
  *
- * Description: 
+ * Description: Get the value of a record
  *
- * Parameters: 
+ * Parameters: Record *record, Schema *schema, int attrNum, Value **value
  *
- * Return: 
+ * Return: RC, value
  *
- * Author: 
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC getAttr (Record *record, Schema *schema, int attrNum, Value **value){
+    int offset = 0;
+    
+    // Calculate offset
+    for(int i=0; i< attrNum; i++){
+        switch (schema->dataTypes[i]){
+            case DT_INT:
+                offset += sizeof(int);
+                break;
+            case DT_FLOAT:
+                offset += sizeof(float);
+                break;
+            case DT_BOOL:
+                offset += sizeof(bool);
+                break;
+            case DT_STRING:
+                offset += schema->typeLength[i];
+                break;
+        }
+    }
+    
+    // Get value from record.
+    *value = (Value *)malloc(sizeof(Value));
+    (*value)->dt=schema->dataTypes[attrNum];
+    switch (schema->dataTypes[attrNum]) 
+	{
+		case DT_INT:
+			memcpy(&((*value)->v.intV), record->data+offset, sizeof(int));
+			break;
+		case DT_FLOAT:
+			memcpy(&((*value)->v.floatV), record->data+offset, sizeof(float));
+			break;
+		case DT_BOOL:		
+			memcpy(&((*value)->v.boolV), record->data+offset, sizeof(int));
+			break;
+		case DT_STRING:
+            //We need append \0 in the end of string.
+            char end = '\0';
+            (*value)->v.stringV = (char *)malloc(schema->typeLength[attrNum] + 1);
+            memcpy((*value)->v.stringV, record->data+offset, schema->typeLength[attrNum]);
+            memcpy((*value)->v.stringV+schema->typeLength[attrNum], &end, 1);
+			break;
+	}
+    
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name: 
+ * Function Name: setAttr
  *
- * Description: 
+ * Description: Set the value of a record
  *
- * Parameters: 
+ * Parameters: Record *record, Schema *schema, int attrNum, Value *value
  *
- * Return: 
+ * Return: RC
  *
- * Author: 
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value){
+    int offset = 0;
+    
+    // Calculate offset 
+    for(int i=0; i< attrNum; i++){
+        switch (schema->dataTypes[i]){
+            case DT_INT:
+                offset += sizeof(int);
+                break;
+            case DT_FLOAT:
+                offset += sizeof(float);
+                break;
+            case DT_BOOL:
+                offset += sizeof(bool);
+                break;
+            case DT_STRING:
+                offset += schema->typeLength[i];
+                break;
+        }
+    }
+    
+    // Set value into record.
+    switch (schema->dataTypes[attrNum])
+	{
+		case DT_INT:
+			memcpy(record->data+offset, &(value->v.intV), sizeof(int));
+			break;
+		case DT_FLOAT:
+			memcpy(record->data+offset, &(value->v.floatV), sizeof(float));
+			break;
+		case DT_BOOL:
+			memcpy(record->data+offset, &(value->v.boolV), sizeof(int));
+			break;
+		case DT_STRING:
+            // We need to calculate the strlen of the input string.
+            if(strlen(value->v.stringV) >= schema->typeLength[attrNum]){
+                memcpy(record->data + offset, value->v.stringV, schema->typeLength[attrNum]);
+            } else {
+                strcpy(record->data+offset, value->v.stringV);
+            }
+			break;
+	}
+	
+	return RC_OK;
 }
 
