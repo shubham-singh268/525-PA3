@@ -423,7 +423,7 @@ RC closeScan (RM_ScanHandle *scan)
 int getRecordSize (Schema *schema)
 {
 	int i;
-	int result;
+	int result=0;
 
 	for(i=0;i<schema->numAttr;i++)
 	{
