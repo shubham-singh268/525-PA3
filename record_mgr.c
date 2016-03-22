@@ -43,6 +43,7 @@ RC initRecordManager (void *mgmtData){
  *
  * History:
  *      Date            Name                        Content
+ *      2016/03/12      Xiaoliang Wu                Complete
  *
 ***************************************************************/
 
@@ -78,9 +79,7 @@ RC createTable (char *name, Schema *schema){
     Value *recordSize;
     Value *slotSize;
     Value *recordNum;
-    char *input, *pageMetadataInput;
-    int pageMetadataNum;
-    Value *pageNum, *capacityFlag;
+    char *input;
 
     int i,j,k;
 
@@ -108,12 +107,19 @@ RC createTable (char *name, Schema *schema){
         fileMetadataSize = fileMetadataSize/PAGE_SIZE + 1;
     }
 
+    fMetadataSize = calloc(1, sizeof(Value));
     fMetadataSize->dt = DT_INT;
     fMetadataSize->v.intV = fileMetadataSize;
+
+    slotSize = calloc(1, sizeof(Value));
     slotSize->dt = DT_INT;
     slotSize->v.intV = 256;
+
+    recordSize = calloc(1, sizeof(Value));
     recordSize->dt = DT_INT;
     recordSize->v.intV = (getRecordSize(schema)/(slotSize->v.intV));
+
+    recordNum = calloc(1, sizeof(Value));
     recordNum->dt = DT_INT;
     recordNum->v.intV = 0;
 
@@ -129,6 +135,11 @@ RC createTable (char *name, Schema *schema){
     strcat(input,serializeValue(slotSize));
     strcat(input,serializeValue(recordNum));
     strcat(input,serializeSchema(schema));
+
+    free(fMetadataSize);
+    free(recordSize);
+    free(slotSize);
+    free(recordSize);
 
     RC_flag = ensureCapacity(fileMetadataSize, &fh);
     if(RC_flag != RC_OK){
@@ -152,37 +163,13 @@ RC createTable (char *name, Schema *schema){
     }
     free(input);
 
-    RC_flag = appendEmptyBlock(&fh);
+    RC_flag = addPageMetadataBlock(&fh);
+    
     if(RC_flag != RC_OK){
-        RC_flag = closePageFile(&fh);
-        return RC_flag;
+       RC_flag = closePageFile(&fh);
+       return RC_flag;
     }
-
-    pageNum->dt = DT_INT;
-    pageNum->v.intV = 0;
-    capacityFlag->dt = DT_BOOL;
-    capacityFlag->v.boolV = 1;
-
-    pageMetadataNum = (strlen(serializeValue(pageNum)) + strlen(serializeValue(capacityFlag)))/PAGE_SIZE;
-
-    pageMetadataInput = (char *)calloc(1, PAGE_SIZE);
-
-    for (i = 0; i < pageMetadataNum; ++i) {
-        strcat(pageMetadataInput, serializeValue(pageNum)); 
-        strcat(pageMetadataInput, serializeValue(capacityFlag)); 
-        pageNum->v.intV = i+1;
-        if(i == pageMetadataNum-1){
-            capacityFlag->v.boolV = 0;
-            pageNum->v.intV = pageMetadataNum;
-        }
-    }
-    RC_flag = writeBlock(fileMetadataSize, &fh, ph);
-    if(RC_flag != RC_OK){
-        RC_flag = closePageFile(&fh);
-        return RC_flag;
-    }
-
-    free(pageMetadataInput);
+    
     RC_flag = closePageFile(&fh);
     return RC_flag;
 }
@@ -684,3 +671,57 @@ RC setAttr (Record *record, Schema *schema, int attrNum, Value *value){
     return RC_OK;
 }
 
+/***************************************************************
+ * Function Name: addPageMetadataBlock
+ *
+ * Description: add block that contain pages metadata
+ *
+ * Parameters: SM_FileHandle *fh
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/22/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+RC addPageMetadataBlock(SM_FileHandle *fh){
+    RC RC_flag;
+    Value *pageNum, *capacityFlag;
+    char * pageMetadataInput;
+    int pageMetadataNum;
+
+    int i;
+    RC_flag = appendEmptyBlock(fh);
+    if(RC_flag != RC_OK){
+        RC_flag = closePageFile(fh);
+        return RC_flag;
+    }
+
+    pageNum->dt = DT_INT;
+    pageNum->v.intV = fh->totalNumPages;
+    capacityFlag->dt = DT_INT;
+    capacityFlag->v.intV = -1;
+
+    pageMetadataNum = PAGE_SIZE/(strlen(serializeValue(pageNum)) + strlen(serializeValue(capacityFlag)));
+
+    pageMetadataInput = (char *)calloc(PAGE_SIZE, sizeof(char));
+
+    for (i = 0; i < pageMetadataNum; ++i) {
+        strcat(pageMetadataInput, serializeValue(pageNum)); 
+        strcat(pageMetadataInput, serializeValue(capacityFlag)); 
+        pageNum->v.intV = i+1;
+        if(i == pageMetadataNum-1){
+            pageNum->v.intV = fh->totalNumPages-1;
+        }
+    }
+    RC_flag = writeBlock(fh->totalNumPages-1, fh, pageMetadataInput);
+    if(RC_flag != RC_OK){
+        return RC_flag;
+    }
+
+    free(pageMetadataInput);
+    return RC_OK;
+}

@@ -43,4 +43,7 @@ extern RC freeRecord (Record *record);
 extern RC getAttr (Record *record, Schema *schema, int attrNum, Value **value);
 extern RC setAttr (Record *record, Schema *schema, int attrNum, Value *value);
 
+// additional function
+extern RC addPageMetadataBlock(SM_FileHandle *fh);
+
 #endif // RECORD_MGR_H
