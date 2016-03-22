@@ -2,6 +2,8 @@
 #define TABLES_H
 
 #include "dt.h"
+#include "buffer_mgr.h"
+#include "storage_mgr.h"
 
 // Data Types, Records, and Schemas
 typedef enum DataType {
