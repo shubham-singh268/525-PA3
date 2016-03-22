@@ -98,7 +98,7 @@ RC createTable (char *name, Schema *schema){
     numAttr = schema->numAttr;
     keySize = schema->keySize;
 
-    fileMetadataSize = (6 + numAttr + keySize)*sizeof(int) + numAttr*sizeof(char);
+    fileMetadataSize = strlen(serializeSchema(schema)) + 4*sizeof(int);
 
     if(fileMetadataSize%PAGE_SIZE == 0){
         fileMetadataSize = fileMetadataSize/PAGE_SIZE;
@@ -124,11 +124,6 @@ RC createTable (char *name, Schema *schema){
     recordNum->v.intV = 0;
 
     input = (char *)calloc(PAGE_SIZE, sizeof(char));
-
-    if(fileMetadataSize>1){
-        printf("file metadata size > 1.\n");
-        while(1){}
-    }
 
     strcat(input,serializeValue(fMetadataSize));
     strcat(input,serializeValue(recordSize));
@@ -191,6 +186,67 @@ RC createTable (char *name, Schema *schema){
 ***************************************************************/
 
 RC openTable (RM_TableData *rel, char *name){
+    RC RC_flag;
+    SM_FileHandle fh;
+    BM_BufferPool *bm = MAKE_POOL();
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+
+    Schema *schema;
+    Value numAttr;
+    int *typeLength, keyAttrs;
+    int keySize;
+    DataType * dataType;
+    char **attrNames;
+
+    char * fileMetadataSize;
+    char * charSchema;
+    Value *fMetadataSize;
+    int i;
+    char * flag;
+
+    // open file and initial buffer pool
+    RC_flag = openPageFile(name, &fh);
+    if(RC_flag != RC_OK){
+        return RC_flag;
+    }
+
+    RC_flag = initBufferPool(bm, name, 10, RS_LRU, NULL);
+    if(RC_flag != RC_OK){
+        return RC_flag;
+    }
+
+    // read first page, get how many page are used to store file metadata
+    RC_flag = pinPage(bm, h, 0);
+
+    fileMetadataSize = (char *)calloc(sizeof(int), sizeof(char));
+    memcpy(fileMetadataSize, h->data, sizeof(int));
+    fMetadataSize = stringToValue(fileMetadataSize);
+
+    // get schema as char
+    charSchema = (char *)calloc(100, sizeof(char));
+    memcpy(charSchema, h->data+4*sizeof(int), PAGE_SIZE-4*sizeof(int));
+
+    if(fMetadataSize->v.intV > 0){
+        for (i = 1; i < fMetadataSize->v.intV; ++i) {
+            pinPage(bm, h,1);
+            strcat(charSchema, h->data);
+        }
+    }
+
+    // process char and convert to specific type
+    
+    flag = strchr(charSchema, '<');
+
+    // assign to rel
+    //schema = createSchema();
+
+    rel->name = name;
+    rel->schema = schema;
+    rel->bm = bm;
+    rel->fh = &fh;
+
+    free(h);
+    return RC_OK;
 }
 
 /***************************************************************
@@ -206,13 +262,14 @@ RC openTable (RM_TableData *rel, char *name){
  *
  * History:
  *      Date            Name                        Content
+ *      03/22/16        Xiaoliang Wu                Complete;
  *
 ***************************************************************/
 
 RC closeTable (RM_TableData *rel){
     freeSchema(rel->schema);
-
-    //free other things.
+    shutdownBufferPool(rel->bm);
+    closePageFile(rel->fh);
     return RC_OK;
 }
 
