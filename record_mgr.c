@@ -782,3 +782,60 @@ RC addPageMetadataBlock(SM_FileHandle *fh){
     free(pageMetadataInput);
     return RC_OK;
 }
+
+/***************************************************************
+ * Function Name: getFileMetaDataSize
+ *
+ * Description: 
+ *
+ * Parameters: 
+ *
+ * Return: 
+ *
+ * Author: 
+ *
+ * History:
+ *      Date            Name                        Content
+ *
+***************************************************************/
+
+int getFileMetaDataSize(BM_BufferPool *bm){
+}
+
+/***************************************************************
+ * Function Name: recordCostSlot
+ *
+ * Description: 
+ *
+ * Parameters: 
+ *
+ * Return: 
+ *
+ * Author: 
+ *
+ * History:
+ *      Date            Name                        Content
+ *
+***************************************************************/
+
+int recordCostSlot(BM_BufferPool *bm){
+}
+
+/***************************************************************
+ * Function Name: getSlotSize
+ *
+ * Description: 
+ *
+ * Parameters: 
+ *
+ * Return: 
+ *
+ * Author: 
+ *
+ * History:
+ *      Date            Name                        Content
+ *
+***************************************************************/
+
+int getSlotSize(BM_BufferPool *bm){
+}
