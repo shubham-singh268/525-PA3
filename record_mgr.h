@@ -45,5 +45,7 @@ extern RC setAttr (Record *record, Schema *schema, int attrNum, Value *value);
 
 // additional function
 extern RC addPageMetadataBlock(SM_FileHandle *fh);
-
+extern int getFileMetaDataSize(BM_BufferPool *bm);
+extern int recordCostSlot(BM_BufferPool *bm);
+extern int getSlotSize(BM_BufferPool *bm);
 #endif // RECORD_MGR_H
