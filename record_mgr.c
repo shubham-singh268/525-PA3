@@ -66,6 +66,7 @@ RC shutdownRecordManager (){
  * History:
  *      Date            Name                        Content
  *      03/19/16        Xiaoliang Wu                Complete.
+ *      03/22/16        Xiaoliang Wu                Change int convert to string method.
  *
 ***************************************************************/
 
@@ -73,31 +74,30 @@ RC createTable (char *name, Schema *schema){
     RC RC_flag;
     SM_FileHandle fh;
     SM_PageHandle ph;
-    int numAttr, keySize;
     int fileMetadataSize;
-    Value *fMetadataSize;
-    Value *recordSize;
-    Value *slotSize;
-    Value *recordNum;
+    int recordSize;
+    int slotSize;
+    int recordNum;
     char *input;
+    char *charSchema;
 
     int i,j,k;
 
+    // create file
     RC_flag = createPageFile(name);
 
     if(RC_flag != RC_OK){
         return RC_flag;
     }
 
+    // open file
     RC_flag = openPageFile(name, &fh);
 
     if(RC_flag != RC_OK){
         return RC_flag;
     }
 
-    numAttr = schema->numAttr;
-    keySize = schema->keySize;
-
+    // get file metadata size
     fileMetadataSize = strlen(serializeSchema(schema)) + 4*sizeof(int);
 
     if(fileMetadataSize%PAGE_SIZE == 0){
@@ -107,56 +107,51 @@ RC createTable (char *name, Schema *schema){
         fileMetadataSize = fileMetadataSize/PAGE_SIZE + 1;
     }
 
-    fMetadataSize = calloc(1, sizeof(Value));
-    fMetadataSize->dt = DT_INT;
-    fMetadataSize->v.intV = fileMetadataSize;
-
-    slotSize = calloc(1, sizeof(Value));
-    slotSize->dt = DT_INT;
-    slotSize->v.intV = 256;
-
-    recordSize = calloc(1, sizeof(Value));
-    recordSize->dt = DT_INT;
-    recordSize->v.intV = (getRecordSize(schema)/(slotSize->v.intV));
-
-    recordNum = calloc(1, sizeof(Value));
-    recordNum->dt = DT_INT;
-    recordNum->v.intV = 0;
+    // get metadata and store in file
+    recordSize = (getRecordSize(schema)/(slotSize));
+    slotSize = 256;
+    recordNum = 0;
 
     input = (char *)calloc(PAGE_SIZE, sizeof(char));
 
-    strcat(input,serializeValue(fMetadataSize));
-    strcat(input,serializeValue(recordSize));
-    strcat(input,serializeValue(slotSize));
-    strcat(input,serializeValue(recordNum));
-    strcat(input,serializeSchema(schema));
+    memcpy(input, &fileMetadataSize, sizeof(int));
+    memcpy(input+sizeof(int), &recordSize, sizeof(int));
+    memcpy(input+2*sizeof(int), &slotSize, sizeof(int));
+    memcpy(input+3*sizeof(int), &recordNum, sizeof(int));
 
-    free(fMetadataSize);
-    free(recordSize);
-    free(slotSize);
-    free(recordSize);
+    charSchema = serializeSchema(schema);
 
     RC_flag = ensureCapacity(fileMetadataSize, &fh);
+
     if(RC_flag != RC_OK){
         RC_flag = closePageFile(&fh);
         return RC_flag;
     }
 
-    for (i = 0; i < fileMetadataSize; ++i) {
-        
-        ph = (SM_PageHandle)calloc(1,PAGE_SIZE);
-        for (k = 0, j = i*PAGE_SIZE; j < (i+1)*PAGE_SIZE; ++j, ++k) {
-            ph[k] = input[j];
-        }
-        ph[PAGE_SIZE] = '\0';
-        RC_flag = writeBlock(i,&fh,ph);
-        free(ph);
-        if(RC_flag != RC_OK){
-            RC_flag = closePageFile(&fh);
-            return RC_flag;
+    if(strlen(charSchema)<PAGE_SIZE-4*sizeof(int)){
+        memcpy(input+4*sizeof(int), charSchema, strlen(charSchema));
+        RC_flag = writeBlock(0, &fh, input);
+        free(input);
+    }else{
+        memcpy(input+4*sizeof(int), charSchema, PAGE_SIZE-4*sizeof(int));
+        RC_flag = writeBlock(0, &fh, input);
+        free(input);
+        for(i = 1; i<fileMetadataSize; ++i){
+            input = (char *)calloc(PAGE_SIZE, sizeof(char));
+            if(i==fileMetadataSize-1){
+                memcpy(input, charSchema+i*PAGE_SIZE, strlen(charSchema+i*PAGE_SIZE));
+            }else{
+                memcpy(input, charSchema+i*PAGE_SIZE, PAGE_SIZE);
+            }
+            RC_flag = writeBlock(i, &fh, input);
+            free(input);
         }
     }
-    free(input);
+    
+    if(RC_flag != RC_OK){
+       RC_flag = closePageFile(&fh);
+       return RC_flag;
+    }
 
     RC_flag = addPageMetadataBlock(&fh);
     
