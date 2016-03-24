@@ -177,6 +177,7 @@ RC createTable (char *name, Schema *schema){
  *
  * History:
  *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
@@ -187,17 +188,18 @@ RC openTable (RM_TableData *rel, char *name){
     BM_PageHandle *h = MAKE_PAGE_HANDLE();
 
     Schema *schema;
-    Value numAttr;
-    int *typeLength, keyAttrs;
+    int numAttr;
+    int *typeLength, *keyAttrs;
     int keySize;
     DataType * dataType;
     char **attrNames;
 
-    char * fileMetadataSize;
+    int fileMetadataSize;
     char * charSchema;
-    Value *fMetadataSize;
-    int i;
+    int i,j,k;
     char * flag;
+    char * flag2;
+    char * temp;
 
     // open file and initial buffer pool
     RC_flag = openPageFile(name, &fh);
@@ -211,36 +213,139 @@ RC openTable (RM_TableData *rel, char *name){
     }
 
     // read first page, get how many page are used to store file metadata
-    RC_flag = pinPage(bm, h, 0);
 
-    fileMetadataSize = (char *)calloc(sizeof(int), sizeof(char));
-    memcpy(fileMetadataSize, h->data, sizeof(int));
-    fMetadataSize = stringToValue(fileMetadataSize);
+    fileMetadataSize = getFileMetaDataSize(bm);
 
     // get schema as char
-    charSchema = (char *)calloc(100, sizeof(char));
-    memcpy(charSchema, h->data+4*sizeof(int), PAGE_SIZE-4*sizeof(int));
+    charSchema = (char *)calloc(fileMetadataSize, PAGE_SIZE);
 
-    if(fMetadataSize->v.intV > 0){
-        for (i = 1; i < fMetadataSize->v.intV; ++i) {
-            pinPage(bm, h,1);
-            strcat(charSchema, h->data);
+    for (i = 0; i < fileMetadataSize; ++i) {
+        RC_flag = pinPage(bm, h, i);
+        if(RC_flag != RC_OK){
+            return RC_flag;
+        }
+
+        memcpy(charSchema+i*PAGE_SIZE, h, sizeof(PAGE_SIZE));
+        RC_flag = unpinPage(bm, h);
+        if(RC_flag != RC_OK){
+            return RC_flag;
         }
     }
 
+    charSchema = charSchema+4*sizeof(int);
+
     // process char and convert to specific type
     
+    // assign numAttr
     flag = strchr(charSchema, '<');
+    flag++;
 
+    temp = (char *)calloc(40, sizeof(char));
+    for (i = 0; 1; ++i) {
+        if(*flag+i == '>'){
+            break;
+        }
+
+        temp[i] = flag[i];
+    }
+    numAttr = atoi(temp);
+    free(temp);
+
+    // assign attrNames, dataType, typeLength
+    flag = strchr(flag, '(');
+    flag++;
+
+    attrNames = (char **)calloc(numAttr, sizeof(char *));
+    dataType = (DataType *)calloc(numAttr, sizeof(DataType));
+    typeLength = (int *)calloc(numAttr, sizeof(int));
+
+    for (i = 0; i<numAttr; ++i) {
+        for (j = 0; 1; ++j) {
+
+            if(*flag+j ==':'){
+                attrNames[i] = (char *)calloc(j, sizeof(char));
+                memcpy(attrNames[i], flag, j);
+
+                if(*flag+j+1 =='I'){
+                    dataType[i] = DT_INT;
+                    typeLength[i] = 0;
+                }else if(*flag+j+1 == 'F'){
+                    dataType[i] = DT_FLOAT;
+                    typeLength[i] = 0;
+                }else if(*flag+j+1 == 'S'){
+                    dataType[i] = DT_STRING;
+
+                    temp = (char *)calloc(40, sizeof(char));
+                    for (k = 0; 1; ++k) {
+                        if(*flag+k+j+8 == ']'){
+                            break;
+                        }
+                        temp[k] = flag[k+j+8];
+                    }
+
+                    typeLength[i] = atoi(temp);
+                    free(temp);
+                }else if(*flag+j+1 == 'B'){
+                    dataType[i] = DT_BOOL;
+                    typeLength[i] = 0;
+                }else{
+                    return RC_RM_UNKOWN_DATATYPE; 
+                }
+                // after assign final attribute, flag didn't find next ,
+                if(i == numAttr-1){
+                    break;
+                }
+                flag = strchr(flag, ',');
+                flag = flag + 2;
+                break;
+            }
+        }
+    }
+
+    // assign keyAttrs, keySize
+    flag = strchr(flag, '(');
+    flag++;
+    flag2 = flag;
+
+    for (i = 0; 1; ++i) {
+        flag2 = strchr(flag2, ',');
+        if(flag2 == NULL) break;
+        flag2++;
+    }
+
+    keySize = i+1; // assign keySize
+
+    keyAttrs = (int *)calloc(keySize, sizeof(int));
+
+    for (i = 0; i<keySize; ++i) {
+        for(j = 0; 1; ++j){
+            if((*flag+j == ',') || (*flag+j == ')')){
+                temp = (char *)calloc(100, sizeof(char));
+                memcpy(temp, flag, j);
+                for (k = 0; k < numAttr; ++k) {
+                    if(strcmp(temp, attrNames[k]) == 0){
+                        keyAttrs[i] = k; // assign keyAttrs
+                        free(temp);
+                        break;
+                    }
+                }
+                if(*flag + j == ','){
+                    flag = flag + j + 2;}
+                else{
+                    flag = flag + j;}
+                break;
+            }
+        }
+    }
     // assign to rel
-    //schema = createSchema();
-
+    schema = createSchema(numAttr, attrNames, dataType, typeLength, keySize, keyAttrs);
     rel->name = name;
     rel->schema = schema;
     rel->bm = bm;
     rel->fh = &fh;
 
     free(h);
+    free(charSchema);
     return RC_OK;
 }
 
@@ -302,10 +407,18 @@ RC deleteTable (char *name){
  *
  * History:
  *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 int getNumTuples (RM_TableData *rel){
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int numTuples;
+    pinPage(rel->bm, h, 0);
+    memcpy(&numTuples, h->data+3*sizeof(int), sizeof(int));
+    unpinPage(rel->bm, h);
+    free(h);
+    return numTuples;
 }
 
 /***************************************************************
@@ -781,56 +894,82 @@ RC addPageMetadataBlock(SM_FileHandle *fh){
 /***************************************************************
  * Function Name: getFileMetaDataSize
  *
- * Description: 
+ * Description: get file metadata size from file
  *
- * Parameters: 
+ * Parameters: BM_BufferPool *bm
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      03/23           Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 int getFileMetaDataSize(BM_BufferPool *bm){
+    int fileMetadataSize;
+
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    pinPage(bm, h, 0);
+    memcpy(&fileMetadataSize, h->data, sizeof(int));
+    unpinPage(bm, h);
+    free(h);
+    return fileMetadataSize;
 }
 
 /***************************************************************
  * Function Name: recordCostSlot
  *
- * Description: 
+ * Description: get record size(slot) from file
  *
- * Parameters: 
+ * Parameters: BM_BufferPool *bm
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 int recordCostSlot(BM_BufferPool *bm){
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int recordSize;
+
+    pinPage(bm, h, 0);
+    memcpy(&recordSize, h->data+sizeof(int), sizeof(int));
+    unpinPage(bm, h);
+    free(h);
+    return recordSize;
 }
 
 /***************************************************************
  * Function Name: getSlotSize
  *
- * Description: 
+ * Description: get slot size from file
  *
- * Parameters: 
+ * Parameters: BM_BufferPool *bm
  *
- * Return: 
+ * Return: int
  *
- * Author: 
+ * Author: Xiaoliang Wu
  *
  * History:
  *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
  *
 ***************************************************************/
 
 int getSlotSize(BM_BufferPool *bm){
+    int slotSize;
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    pinPage(bm, h, 0);
+    memcpy(&slotSize, h->data+2*sizeof(int), sizeof(int));
+    unpinPage(bm,h);
+    free(h);
+    return slotSize;
 }
