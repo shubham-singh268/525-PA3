@@ -2,6 +2,7 @@
 .project
 *.o
 *.bin
+tags
 test1
 test2
 test2
