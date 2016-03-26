@@ -519,7 +519,7 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 {
     scan->rel=rel;
     scan->currentRcdNum=0;
-    scan->totalRcrdNum=getNumTuples (rel);
+    scan->totalRcrdNum=getNumTuples(rel);
     return RC_OK;
 }
 
