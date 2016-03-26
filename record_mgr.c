@@ -500,43 +500,62 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name:startScan
  *
- * Description:
+ * Description:initialize a scan by the parameters
  *
- * Parameters:
+ * Parameters:RM_TableData *rel, RM_ScanHandle *scan, Expr *cond
  *
- * Return:
+ * Return:RC
  *
- * Author:
+ * Author:liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ *03/26/2016    liu zhipeng             first time to implement the function
 ***************************************************************/
 
 RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 {
-
+    scan->rel=rel;
+    scan->currentRcdNum=0;
+    scan->totalRcrdNum=getNumTuples (rel);
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name:next
  *
- * Description:
+ * Description:do the search in the scanhanlde and return the next tuple that fulfills the scan condition in parameter "record"
  *
- * Parameters:
+ * Parameters:RM_ScanHandle *scan, Record *record
  *
- * Return:
+ * Return:RC
  *
- * Author:
+ * Author:liu zhipeng
  *
  * History:
  *      Date            Name                        Content
- *
+ *03/26/2016    liu zhipeng             design the outline of the function
 ***************************************************************/
 
-RC next (RM_ScanHandle *scan, Record *record) {
+RC next (RM_ScanHandle *scan, Record *record) 
+{
+     if(scan->currentRcdNum==totalRcrdNum)
+        return  RC_RM_NO_MORE_TUPLES;
+    
+ /*   result=(Value *)calloc(1,sizeof(Value));
+    tmp=(Record *)calloc(1,sizeof(Record));
+    getRecord(scan->rel,rid,tmp);//  RID can be find by the currentRcdNum
+    evalExpr (tmp, rel->schema, cond,&result);
+    if(result->v.boolV)
+        tuple found
+        record=
+    scan->currentRcdNum++;
+    free(result);
+    free(tmp);
+    return RC_OK;
+    */
 }
 
 /***************************************************************
