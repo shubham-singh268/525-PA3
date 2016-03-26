@@ -541,7 +541,7 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 
 RC next (RM_ScanHandle *scan, Record *record) 
 {
-     if(scan->currentRcdNum==totalRcrdNum)
+     if(scan->currentRcdNum==scan->totalRcrdNum)
         return  RC_RM_NO_MORE_TUPLES;
     
  /*   result=(Value *)calloc(1,sizeof(Value));
