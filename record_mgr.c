@@ -518,8 +518,9 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 {
     scan->rel=rel;
-    scan->currentRcdNum=0;
-    scan->totalRcrdNum=getNumTuples(rel);
+    scan->currentPage=0;
+    scan->currentSlot=0;
+    scan->expr=cond;
     return RC_OK;
 }
 
@@ -541,21 +542,74 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 
 RC next (RM_ScanHandle *scan, Record *record) 
 {
-     if(scan->currentRcdNum==scan->totalRcrdNum)
-        return  RC_RM_NO_MORE_TUPLES;
-    
- /*   result=(Value *)calloc(1,sizeof(Value));
-    tmp=(Record *)calloc(1,sizeof(Record));
-    getRecord(scan->rel,rid,tmp);//  RID can be find by the currentRcdNum
-    evalExpr (tmp, rel->schema, cond,&result);
-    if(result->v.boolV)
-        tuple found
-        record=
-    scan->currentRcdNum++;
-    free(result);
-    free(tmp);
-    return RC_OK;
-    */
+    int index,page,maxslot;
+    page=0;
+    BM_BufferPool *tmpbm;
+    tmpbm=scan->rel->bm;
+    BM_PageHandle *ph;
+    RID rid;
+
+    Value *result=(Value *)calloc(1,sizeof(Value));
+    Record *tmp=(Record *)calloc(1,sizeof(Record));
+
+    index=getFileMetaDataSize(tmpbm)+1;
+    pinPage(tmpbm,ph,index);
+    while(page!=index)
+    {
+        memcpy(&page, ph->data + (scan->currentPage) *2* sizeof(int), sizeof(int));
+        memcpy(&maxslot, ph->data + ((scan->currentPage) *2+1)* sizeof(int), sizeof(int));
+        int i;
+        if(scan->currentSlot!=0)
+        {
+            for(i=scan->currentSlot;i<maxslot;i++)
+            {
+                rid.page=scan->currentPage;
+                rid.slot=i;
+                getRecord(scan->rel,rid,tmp);
+                evalExpr (tmp, scan->rel->schema, scan->expr,&result);
+                if(result->v.boolV)
+                {
+                    record=tmp;
+                    if(i==maxslot)
+                    {
+                        scan->currentPage++;
+                        scan->currentSlot=0;
+                    }
+                    else
+                        scan->currentSlot=i+1;
+                    free(result);
+                    free(tmp);
+                    return RC_OK;
+                }
+            }
+        }
+        else
+        {
+            for(i=0;i<maxslot;i++)
+            {
+                rid.page=scan->currentPage;
+                rid.slot=i;
+                getRecord(scan->rel,rid,tmp);
+                evalExpr (tmp, scan->rel->schema, scan->expr,&result);
+                if(result->v.boolV)
+                {
+                    record=tmp;
+                    if(i==maxslot)
+                    {
+                        scan->currentPage++;
+                        scan->currentSlot=0;
+                    }
+                    else
+                        scan->currentSlot=i+1;
+                    free(result);
+                    free(tmp);
+                    return RC_OK;
+                }
+            }
+        }
+        scan->currentPage++;
+    }
+    return RC_RM_NO_MORE_TUPLES;
 }
 
 /***************************************************************

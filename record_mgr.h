@@ -9,8 +9,9 @@
 typedef struct RM_ScanHandle
 {
   RM_TableData *rel;
-  int totalRcrdNum;
-  int currentRcdNum;
+  int currentPage;
+  int currentSlot;
+  Expr *expr;
   void *mgmtData;
 } RM_ScanHandle;
 
