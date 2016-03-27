@@ -542,8 +542,7 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 
 RC next (RM_ScanHandle *scan, Record *record) 
 {
-    int index,page,maxslot;
-    page=0;
+    int index,maxslot;
     BM_BufferPool *tmpbm;
     tmpbm=scan->rel->bm;
     BM_PageHandle *ph;
@@ -554,9 +553,8 @@ RC next (RM_ScanHandle *scan, Record *record)
 
     index=getFileMetaDataSize(tmpbm)+1;
     pinPage(tmpbm,ph,index);
-    while(page!=index)
+    while(scan->currentPage!=index)
     {
-        memcpy(&page, ph->data + (scan->currentPage) *2* sizeof(int), sizeof(int));
         memcpy(&maxslot, ph->data + ((scan->currentPage) *2+1)* sizeof(int), sizeof(int));
         int i;
         if(scan->currentSlot!=0)
