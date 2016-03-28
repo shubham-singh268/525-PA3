@@ -108,8 +108,8 @@ RC createTable (char *name, Schema *schema) {
     }
 
     // get metadata and store in file
-    recordSize = (getRecordSize(schema) / (slotSize));
     slotSize = 256;
+    recordSize = (getRecordSize(schema) / (slotSize));
     recordNum = 0;
 
     input = (char *)calloc(PAGE_SIZE, sizeof(char));
@@ -217,7 +217,6 @@ RC openTable (RM_TableData *rel, char *name) {
     fileMetadataSize = getFileMetaDataSize(bm);
 
     // get schema as char
-    charSchema = (char *)calloc(fileMetadataSize, PAGE_SIZE);
 
     for (i = 0; i < fileMetadataSize; ++i) {
         RC_flag = pinPage(bm, h, i);
@@ -225,14 +224,13 @@ RC openTable (RM_TableData *rel, char *name) {
             return RC_flag;
         }
 
-        memcpy(charSchema + i * PAGE_SIZE, h, sizeof(PAGE_SIZE));
         RC_flag = unpinPage(bm, h);
         if (RC_flag != RC_OK) {
             return RC_flag;
         }
     }
 
-    charSchema = charSchema + 4 * sizeof(int);
+    charSchema = h->data + 4 * sizeof(int);
 
     // process char and convert to specific type
 
@@ -346,8 +344,6 @@ RC openTable (RM_TableData *rel, char *name) {
     rel->bm = bm;
     rel->fh = &fh;
 
-    free(h);
-    free(charSchema);
     return RC_OK;
 }
 
@@ -371,7 +367,6 @@ RC openTable (RM_TableData *rel, char *name) {
 RC closeTable (RM_TableData *rel) {
     freeSchema(rel->schema);
     shutdownBufferPool(rel->bm);
-    closePageFile(rel->fh);
     return RC_OK;
 }
 
@@ -1019,7 +1014,7 @@ RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
 ***************************************************************/
 RC addPageMetadataBlock(SM_FileHandle *fh) {
     RC RC_flag;
-    Value *pageNum, *capacityFlag;
+    int pageNum, capacity;
     char * pageMetadataInput;
     int pageMetadataNum;
 
@@ -1030,21 +1025,19 @@ RC addPageMetadataBlock(SM_FileHandle *fh) {
         return RC_flag;
     }
 
-    pageNum->dt = DT_INT;
-    pageNum->v.intV = fh->totalNumPages;
-    capacityFlag->dt = DT_INT;
-    capacityFlag->v.intV = -1;
 
-    pageMetadataNum = PAGE_SIZE / (strlen(serializeValue(pageNum)) + strlen(serializeValue(capacityFlag)));
+    pageMetadataNum = PAGE_SIZE / (2*sizeof(int));
 
     pageMetadataInput = (char *)calloc(PAGE_SIZE, sizeof(char));
+    pageNum = fh->totalNumPages;
+    capacity = -1;
 
-    for (i = 0; i < pageMetadataNum; ++i) {
-        strcat(pageMetadataInput, serializeValue(pageNum));
-        strcat(pageMetadataInput, serializeValue(capacityFlag));
-        pageNum->v.intV = i + 1;
+    for (i = 0; i < pageMetadataNum; ++i){ 
+        memcpy(pageMetadataInput+i*2*sizeof(int), &pageNum, sizeof(int));
+        memcpy(pageMetadataInput+i*2*sizeof(int)+sizeof(int), &capacity, sizeof(int));
+        pageNum++;
         if (i == pageMetadataNum - 1) {
-            pageNum->v.intV = fh->totalNumPages - 1;
+            pageNum = fh->totalNumPages - 1;
         }
     }
     RC_flag = writeBlock(fh->totalNumPages - 1, fh, pageMetadataInput);
