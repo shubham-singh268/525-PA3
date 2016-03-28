@@ -542,7 +542,7 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 
 RC next (RM_ScanHandle *scan, Record *record) 
 {
-    int index,maxslot;
+    int index,maxslot,rpage;
     BM_BufferPool *tmpbm;
     tmpbm=scan->rel->bm;
     BM_PageHandle *ph;
@@ -555,13 +555,14 @@ RC next (RM_ScanHandle *scan, Record *record)
     pinPage(tmpbm,ph,index);
     while(scan->currentPage!=index)
     {
+        memcpy(&rpage,ph->data+(scan->currentPage)*2*sizeof(int),sizeof(int));
         memcpy(&maxslot, ph->data + ((scan->currentPage) *2+1)* sizeof(int), sizeof(int));
         int i;
-        if(scan->currentSlot!=0)
+        if(maxslot!=-1)
         {
             for(i=scan->currentSlot;i<maxslot;i++)
             {
-                rid.page=scan->currentPage;
+                rid.page=rpage;
                 rid.slot=i;
                 getRecord(scan->rel,rid,tmp);
                 evalExpr (tmp, scan->rel->schema, scan->expr,&result);
@@ -577,6 +578,7 @@ RC next (RM_ScanHandle *scan, Record *record)
                         scan->currentSlot=i+1;
                     free(result);
                     free(tmp);
+                    unpinPage (tmpbm, ph);
                     return RC_OK;
                 }
             }
@@ -601,12 +603,14 @@ RC next (RM_ScanHandle *scan, Record *record)
                         scan->currentSlot=i+1;
                     free(result);
                     free(tmp);
+                    unpinPage (tmpbm, ph);
                     return RC_OK;
                 }
             }
         }
         scan->currentPage++;
     }
+    unpinPage (tmpbm, ph);
     return RC_RM_NO_MORE_TUPLES;
 }
 
