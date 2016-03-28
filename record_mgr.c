@@ -625,7 +625,7 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 
 RC next (RM_ScanHandle *scan, Record *record) 
 {
-    int index,maxslot,rpage;
+    int index,maxslot,rpage,trs,rc;
     BM_BufferPool *tmpbm;
     tmpbm=scan->rel->bm;
     BM_PageHandle *ph;
@@ -634,7 +634,8 @@ RC next (RM_ScanHandle *scan, Record *record)
     Value *result=(Value *)calloc(1,sizeof(Value));
     Record *tmp=(Record *)calloc(1,sizeof(Record));
 
-    index=getFileMetaDataSize(tmpbm)+1;
+    trs=(getRecordSize (scan->rel->schema)+sizeof(bool))/256+1;
+    index=getFileMetaDataSize(tmpbm);
     pinPage(tmpbm,ph,index);
     while(scan->currentPage!=index)
     {
@@ -646,50 +647,32 @@ RC next (RM_ScanHandle *scan, Record *record)
             for(i=scan->currentSlot;i<maxslot;i++)
             {
                 rid.page=rpage;
-                rid.slot=i;
-                getRecord(scan->rel,rid,tmp);
-                evalExpr (tmp, scan->rel->schema, scan->expr,&result);
-                if(result->v.boolV)
-                {
-                    record=tmp;
-                    if(i==maxslot)
+                rid.slot=i*trs;
+                if(rc=getRecord(scan->rel,rid,tmp)==RC_OK)
+                {   
+                    evalExpr (tmp, scan->rel->schema, scan->expr,&result);
+                    if(result->v.boolV)
                     {
-                        scan->currentPage++;
-                        scan->currentSlot=0;
+                        record=tmp;
+                        if(i==maxslot-1)
+                        {
+                            scan->currentPage++;
+                            scan->currentSlot=0;
+                        }
+                        else
+                            scan->currentSlot=i+1;
+                        free(result);
+                        free(tmp);
+                        unpinPage (tmpbm, ph);
+                        return RC_OK;
                     }
-                    else
-                        scan->currentSlot=i+1;
-                    free(result);
-                    free(tmp);
-                    unpinPage (tmpbm, ph);
-                    return RC_OK;
                 }
             }
         }
         else
         {
-            for(i=0;i<maxslot;i++)
-            {
-                rid.page=scan->currentPage;
-                rid.slot=i;
-                getRecord(scan->rel,rid,tmp);
-                evalExpr (tmp, scan->rel->schema, scan->expr,&result);
-                if(result->v.boolV)
-                {
-                    record=tmp;
-                    if(i==maxslot)
-                    {
-                        scan->currentPage++;
-                        scan->currentSlot=0;
-                    }
-                    else
-                        scan->currentSlot=i+1;
-                    free(result);
-                    free(tmp);
-                    unpinPage (tmpbm, ph);
-                    return RC_OK;
-                }
-            }
+            unpinPage(tmpbm,ph);
+            return RC_RM_NO_MORE_TUPLES;
         }
         scan->currentPage++;
     }
