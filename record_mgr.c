@@ -648,7 +648,7 @@ RC next (RM_ScanHandle *scan, Record *record)
             {
                 rid.page=rpage;
                 rid.slot=i*trs;
-                if(rc=getRecord(scan->rel,rid,tmp)==RC_OK)
+                if((rc=getRecord(scan->rel,rid,tmp))==RC_OK)
                 {   
                     evalExpr (tmp, scan->rel->schema, scan->expr,&result);
                     if(result->v.boolV)
