@@ -424,79 +424,167 @@ int getNumTuples (RM_TableData *rel) {
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name: insertRecord
  *
- * Description:
+ * Description: insert a record.
  *
- * Parameters:
+ * Parameters: RM_TableData *rel, Record *record
  *
- * Return:
+ * Return: RC
  *
- * Author:
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC insertRecord (RM_TableData *rel, Record *record) {
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int r_size = getRecordSize(rel->schema);
+//    int rnum_in_page = 
+    int numTuples, recordNum, maxSize;
+    bool r_stat = true;
+    
+    // Find out the target page and slot at the end.
+//    findTheLastMetablock(rel, h);
+    
+    // If slot is full, append new page.
+    if(recordNum == maxSize){
+        appendEmptyBlock(rel->fh);
+        // Add page header and set record id.
+    } else {
+        record->id.page = rel->fh->totalNumPages-1;
+        // Get target slot and set record id.
+    }
+    
+    // Insert record header and record data into page.
+    pinPage(rel->bm, h, record->id.page);
+    memcpy(h->data + 256*record->id.slot, &r_stat, sizeof(bool));
+    memcpy(h->data + 256*record->id.slot + sizeof(bool), record->data, r_size);
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);
+    
+    // Record metadata add 1.
+    
+    // Tuple number add 1.
+    pinPage(rel->bm, h, 0);
+    memcpy(&numTuples, h->data + 3 * sizeof(int), sizeof(int));
+    numTuples++;       
+    memcpy(h->data + 3 * sizeof(int), &numTuples, sizeof(int));
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);
+
+    free(h);
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name: deleteRecord
  *
- * Description:
+ * Description: delete a record by id
  *
- * Parameters:
+ * Parameters: RM_TableData *rel, RID id
  *
- * Return:
+ * Return: RC
  *
- * Author:
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC deleteRecord (RM_TableData *rel, RID id) {
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int r_size = getRecordSize(rel->schema);
+    char* r_deleted = (char *)calloc(sizeof(bool) + r_size, sizeof(char));
+    int numTuples;
+    
+    // Delete record and mark record status as false(calloc 0).
+    pinPage(rel->bm, h, id.page);
+    memcpy(h->data + 256*id.slot, r_deleted, sizeof(bool) + r_size);
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);
+    
+    // Block header size minus 1.
+    
+    // Tuple number minus 1.
+    pinPage(rel->bm, h, 0);
+    memcpy(&numTuples, h->data + 3 * sizeof(int), sizeof(int));
+    numTuples--;       
+    memcpy(h->data + 3 * sizeof(int), &numTuples, sizeof(int));
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);
+    
+    free(h);
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name: updateRecord
  *
- * Description:
+ * Description: update a record by its id
  *
- * Parameters:
+ * Parameters: RM_TableData *rel, Record *record
  *
- * Return:
+ * Return: RC
  *
- * Author:
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC updateRecord (RM_TableData *rel, Record *record) {
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int r_size = getRecordSize(rel->schema);
+    
+    pinPage(rel->bm, h, record->id.page);
+    memcpy(h->data + 256*record->id.slot + sizeof(bool), record->data, r_size);
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);
+    
+    free(h);
+    return RC_OK;
 }
 
 /***************************************************************
- * Function Name:
+ * Function Name: getRecord
  *
- * Description:
+ * Description: get a record by id
  *
- * Parameters:
+ * Parameters: RM_TableData *rel, RID id, Record *record
  *
- * Return:
+ * Return: RC
  *
- * Author:
+ * Author: Xincheng Yang
  *
  * History:
  *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
  *
 ***************************************************************/
-
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    int r_size = getRecordSize(rel->schema);
+    bool r_stat;
+    
+    record->id = id;
+    pinPage(rel->bm, h, id.page);
+
+    // If the record status not valid.(not exist or wrong status or deleted)
+    memcpy(&r_stat, h->data + 256*id.slot, sizeof(bool));
+    if(r_stat != true){
+        free(h);
+        return RC_RM_RECORD_NOT_EXIST;
+    } else {
+        memcpy(record->data, h->data + 256*id.slot + sizeof(bool), r_size);
+        unpinPage(rel->bm, h);
+        free(h);
+        return RC_OK;
+    }
 }
 
 /***************************************************************
@@ -805,10 +893,11 @@ RC freeRecord (Record *record) {
  *
 ***************************************************************/
 RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
-    int offset = 0;
+    int i,offset = 0;
+    char end = '\0';
 
     // Calculate offset
-    for (int i = 0; i < attrNum; i++) {
+    for (i = 0; i < attrNum; i++) {
         switch (schema->dataTypes[i]) {
         case DT_INT:
             offset += sizeof(int);
@@ -840,8 +929,7 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
         memcpy(&((*value)->v.boolV), record->data + offset, sizeof(int));
         break;
     case DT_STRING:
-        //We need append \0 in the end of string.
-        char end = '\0';
+        // We need append end:\0 in the end of string.
         (*value)->v.stringV = (char *)malloc(schema->typeLength[attrNum] + 1);
         memcpy((*value)->v.stringV, record->data + offset, schema->typeLength[attrNum]);
         memcpy((*value)->v.stringV + schema->typeLength[attrNum], &end, 1);
@@ -868,10 +956,10 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
  *
 ***************************************************************/
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
-    int offset = 0;
+    int i, offset = 0;
 
     // Calculate offset
-    for (int i = 0; i < attrNum; i++) {
+    for (i = 0; i < attrNum; i++) {
         switch (schema->dataTypes[i]) {
         case DT_INT:
             offset += sizeof(int);
