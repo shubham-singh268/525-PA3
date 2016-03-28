@@ -437,30 +437,59 @@ int getNumTuples (RM_TableData *rel) {
 RC insertRecord (RM_TableData *rel, Record *record) {
     BM_PageHandle *h = MAKE_PAGE_HANDLE();
     int r_size = getRecordSize(rel->schema);
-//    int rnum_in_page = 
-    int numTuples, recordNum, maxSize;
+    int p_mata_index = getFileMetaDataSize(rel->bm);
+    int r_slotnum = (r_size + sizeof(bool)) / 256 + 1;
+    int offset = 0;
+    int r_current_num, numTuples;
     bool r_stat = true;
-    
+        
     // Find out the target page and slot at the end.
-//    findTheLastMetablock(rel, h);
+    do {
+        pinPage(rel->bm, h, p_mata_index);
+        mempcpy(&p_mata_index, h->data + PAGE_SIZE - sizeof(int), sizeof(int));
+        if(p_mata_index != -1){
+            unpinPage(rel->bm, h);
+        } else {
+            break;
+        }
+    } while(true);
     
-    // If slot is full, append new page.
-    if(recordNum == maxSize){
+    // Find out the target meta index and record number of the page.
+    do {
+        mempcpy(&r_current_num, h->data + offset + sizeof(int), sizeof(int));
+        offset += 2*sizeof(int);
+    } while (r_current_num == PAGE_SIZE / 256);
+    
+    // If no page exist, add new page.
+    if(r_current_num == -1){       
+        // If page mata is full, add new matadata block.
+        if(offset == PAGE_SIZE){       
+            mempcpy(h->data + PAGE_SIZE - sizeof(int), &rel->fh->totalNumPages, sizeof(int));   // Link into new meta data page. 
+            addPageMetadataBlock(rel->fh);
+            markDirty(rel->bm, h);
+            unpinPage(rel->bm, h);      // Unpin the last meta page.
+            pinPage(rel->bm, h, rel->fh->totalNumPages-1);  // Pin the new page.
+            offset = 2*sizeof(int);
+        }
         appendEmptyBlock(rel->fh);
-        // Add page header and set record id.
-    } else {
-        record->id.page = rel->fh->totalNumPages-1;
-        // Get target slot and set record id.
-    }
+        r_current_num = 0;                                  
+        mempcpy(h->data + offset - 2*sizeof(int), rel->fh->totalNumPages-1, sizeof(int));   // set page number.
+    } 
+    
+    // Read record->id and set record number add 1 in meta data.
+    mempcpy(&record->id.page, h->data + offset - 2*sizeof(int), sizeof(int));   // Set record->id page number.
+    record->id.slot = r_current_num * r_slotnum;                                // Set record->id slot.
+    r_current_num++;                                
+    mempcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
+    markDirty(rel->bm, h);
+    unpinPage(rel->bm, h);              // unpin meta page.
     
     // Insert record header and record data into page.
     pinPage(rel->bm, h, record->id.page);
-    memcpy(h->data + 256*record->id.slot, &r_stat, sizeof(bool));
-    memcpy(h->data + 256*record->id.slot + sizeof(bool), record->data, r_size);
+    memcpy(h->data + 256*record->id.slot, &r_stat, sizeof(bool));   // Record header is a del_flag 
+    memcpy(h->data + 256*record->id.slot + sizeof(bool), record->data, r_size); // Record body is values.
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);
-    
-    // Record metadata add 1.
     
     // Tuple number add 1.
     pinPage(rel->bm, h, 0);
@@ -502,8 +531,6 @@ RC deleteRecord (RM_TableData *rel, RID id) {
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);
     
-    // Block header size minus 1.
-    
     // Tuple number minus 1.
     pinPage(rel->bm, h, 0);
     memcpy(&numTuples, h->data + 3 * sizeof(int), sizeof(int));
@@ -512,6 +539,7 @@ RC deleteRecord (RM_TableData *rel, RID id) {
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);
     
+    free(r_deleted);
     free(h);
     return RC_OK;
 }
