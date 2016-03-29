@@ -472,7 +472,6 @@ RC insertRecord (RM_TableData *rel, Record *record) {
             pinPage(rel->bm, h, rel->fh->totalNumPages-1);  // Pin the new page.
             offset = 2*sizeof(int);
         }
-
         memcpy(h->data + offset - 2*sizeof(int), &rel->fh->totalNumPages, sizeof(int));  // set page number.
         appendEmptyBlock(rel->fh);
         r_current_num = 0;                                  
@@ -482,8 +481,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     memcpy(&record->id.page, h->data + offset - 2*sizeof(int), sizeof(int));   // Set record->id page number.
     record->id.slot = r_current_num * r_slotnum;                                // Set record->id slot.
     r_current_num++;                                
-    memcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
-
+    memcpy(h->data + offset - sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);              // unpin meta page.
 
@@ -605,6 +603,7 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
         free(h);
         return RC_RM_RECORD_NOT_EXIST;
     } else {
+        record->data = (char*) malloc(r_size);
         memcpy(record->data, h->data + 256*id.slot + sizeof(bool), r_size);
         unpinPage(rel->bm, h);
         free(h);
@@ -664,6 +663,8 @@ RC next (RM_ScanHandle *scan, Record *record)
     Value *result=(Value *)calloc(1,sizeof(Value));
     Record *tmp=(Record *)calloc(1,sizeof(Record));
 
+
+//printf("ceshi : %s\n",scan->rel->name);
     trs=(getRecordSize (scan->rel->schema)+sizeof(bool))/256+1;
     index=getFileMetaDataSize(tmpbm);
     
@@ -674,7 +675,6 @@ RC next (RM_ScanHandle *scan, Record *record)
         memcpy(&rpage,ph->data+(scan->currentPage)*2*sizeof(int),sizeof(int));
         memcpy(&maxslot, ph->data + ((scan->currentPage) *2+1)* sizeof(int), sizeof(int));
         int i;
-
         if(maxslot!=-1)
         {
             for(i=scan->currentSlot;i<maxslot;i++)
@@ -683,17 +683,20 @@ RC next (RM_ScanHandle *scan, Record *record)
                 rid.slot=i*trs;
                 if((rc=getRecord(scan->rel,rid,tmp))==RC_OK)
                 {   
-                    evalExpr (tmp, scan->rel->schema, scan->expr,&result);
+                    evalExpr (tmp, scan->rel->schema, scan->expr,&result);;
                     if(result->v.boolV)
                     {
-                        record=tmp;
+                        record->id.page=rid.page;
+                        record->id.slot=rid.slot;
+                        record->data=tmp->data;
                         if(i==maxslot-1)
                         {
                             scan->currentPage++;
                             scan->currentSlot=0;
                         }
-                        else
+                        else{
                             scan->currentSlot=i+1;
+                        }
                         free(result);
                         free(tmp);
                         unpinPage (tmpbm, ph);
@@ -734,9 +737,9 @@ RC next (RM_ScanHandle *scan, Record *record)
 
 RC closeScan (RM_ScanHandle *scan)
 {
-    free(scan->rel);
-    free(scan->mgmtData);
-    free(scan);
+    //free(scan->rel);
+    //free(scan->mgmtData);
+    //free(scan);
 
     return RC_OK;
 }
