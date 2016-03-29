@@ -202,7 +202,6 @@ RC openTable (RM_TableData *rel, char *name) {
     // open file and initial buffer pool
     RC_flag = openPageFile(name, fh);
 
-
     if (RC_flag != RC_OK) {
         return RC_flag;
     }
@@ -473,6 +472,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
             pinPage(rel->bm, h, rel->fh->totalNumPages-1);  // Pin the new page.
             offset = 2*sizeof(int);
         }
+
         memcpy(h->data + offset - 2*sizeof(int), &rel->fh->totalNumPages, sizeof(int));  // set page number.
         appendEmptyBlock(rel->fh);
         r_current_num = 0;                                  
@@ -483,13 +483,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     record->id.slot = r_current_num * r_slotnum;                                // Set record->id slot.
     r_current_num++;                                
     memcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
-    // int c;
-    // for(int i=0; i<PAGE_SIZE/sizeof(int);i++){
-    //     memcpy(&c, h->data + i * sizeof(int), sizeof(int));
-    //     if(i<20){
-    //             printf("%d\n", c);
-    //     }
-    // }
+
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);              // unpin meta page.
 
@@ -664,7 +658,7 @@ RC next (RM_ScanHandle *scan, Record *record)
     int index,maxslot,rpage,trs,rc;
     BM_BufferPool *tmpbm;
     tmpbm=scan->rel->bm;
-    BM_PageHandle *ph;
+    BM_PageHandle *ph=(BM_PageHandle*)calloc(1,sizeof(BM_PageHandle));
     RID rid;
 
     Value *result=(Value *)calloc(1,sizeof(Value));
@@ -672,12 +666,15 @@ RC next (RM_ScanHandle *scan, Record *record)
 
     trs=(getRecordSize (scan->rel->schema)+sizeof(bool))/256+1;
     index=getFileMetaDataSize(tmpbm);
+    
     pinPage(tmpbm,ph,index);
+
     while(scan->currentPage!=index)
     {
         memcpy(&rpage,ph->data+(scan->currentPage)*2*sizeof(int),sizeof(int));
         memcpy(&maxslot, ph->data + ((scan->currentPage) *2+1)* sizeof(int), sizeof(int));
         int i;
+
         if(maxslot!=-1)
         {
             for(i=scan->currentSlot;i<maxslot;i++)
@@ -700,6 +697,7 @@ RC next (RM_ScanHandle *scan, Record *record)
                         free(result);
                         free(tmp);
                         unpinPage (tmpbm, ph);
+                        free(ph);
                         return RC_OK;
                     }
                 }
@@ -708,11 +706,13 @@ RC next (RM_ScanHandle *scan, Record *record)
         else
         {
             unpinPage(tmpbm,ph);
+            free(ph);
             return RC_RM_NO_MORE_TUPLES;
         }
         scan->currentPage++;
     }
     unpinPage (tmpbm, ph);
+    free(ph);
     return RC_RM_NO_MORE_TUPLES;
 }
 
