@@ -1,0 +1,601 @@
+=====================================================================================
+=                   525 Programming Assignment 2 README file                        = 
+=====================================================================================
+                    1. Personnel information
+
+  xwu64@hawk.iit.edu      20354020    Xiaoliang Wu (representative)
+  zliu92@hawk.iit.edu     20355209    Zhipeng Liu
+  xyang76@hawk.iit.edu    20352628    Xincheng Yang
+  ctu5@hawk.iit.hawk      20352609    Chuanwei Tu
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    2. File list 
+
+  - buffer_mgr.c
+  - buffer_mgr.h
+  - buffer_mgr_stat.c
+  - buffer_mgr_stat.h
+  - dberror.c
+  - dberror.h
+  - dt.h
+  - expr.c
+  - expr.h
+  - Makefile
+  - README
+  - record_mgr.c
+  - record_mgr.h
+  - rm_serializer.c
+  - storage_mgr.c
+  - storage_mgr.h
+  - tables.h
+  - test_assign3_1.c
+  - test_expr.c
+  - test_helper.h
+  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    3. Milestone
+
+  2016/03/29 Complete project.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    4. Installation instruction  
+  using test_expr.c test:
+    $ make test_expr
+    $ ./test_expr
+
+  using test_assign3_1.c test:
+    $ make test
+    $ ./test
+
+  after test, use clean to delete files except source code.
+    $ make clean
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    5. Function descriptions: of all additional functions  
+
+/***************************************************************
+ * Function Name: initRecordManager
+ *
+ * Description: initial record manager
+ *
+ * Parameters: void *mgmtData
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      2016/03/12      Xiaoliang Wu                Complete
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: shutdownRecordManager
+ *
+ * Description: shutdown record manager
+ *
+ * Parameters: NULL
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      2016/03/12      Xiaoliang Wu                Complete
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: createTable
+ *
+ * Description: Creating a table should create the underlying page file and store information about the schema, free-space, ... and so on in the Table Information pages
+ *
+ * Parameters: char *name, Schema *schema
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/19/16        Xiaoliang Wu                Complete.
+ *      03/22/16        Xiaoliang Wu                Change int convert to string method.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: openTable
+ *
+ * Description: open a table
+ *
+ * Parameters: RM_TableData *rel, char *name
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: closeTable
+ *
+ * Description: close a table
+ *
+ * Parameters: RM_TableData *rel
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/22/16        Xiaoliang Wu                Complete;
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: deleteTable
+ *
+ * Description: delete a table
+ *
+ * Parameters: char *name
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/19/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getNumTuples
+ *
+ * Description: get the number of record
+ *
+ * Parameters: RM_TableData *rel
+ *
+ * Return: int
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: insertRecord
+ *
+ * Description: insert a record.
+ *
+ * Parameters: RM_TableData *rel, Record *record
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: deleteRecord
+ *
+ * Description: delete a record by id
+ *
+ * Parameters: RM_TableData *rel, RID id
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: updateRecord
+ *
+ * Description: update a record by its id
+ *
+ * Parameters: RM_TableData *rel, Record *record
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getRecord
+ *
+ * Description: get a record by id
+ *
+ * Parameters: RM_TableData *rel, RID id, Record *record
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/27      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name:startScan
+ *
+ * Description:initialize a scan by the parameters
+ *
+ * Parameters:RM_TableData *rel, RM_ScanHandle *scan, Expr *cond
+ *
+ * Return:RC
+ *
+ * Author:liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ *03/26/2016    liu zhipeng             first time to implement the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name:next
+ *
+ * Description:do the search in the scanhanlde and return the next tuple that fulfills the scan condition in parameter "record"
+ *
+ * Parameters:RM_ScanHandle *scan, Record *record
+ *
+ * Return:RC
+ *
+ * Author:liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ *03/26/2016    liu zhipeng             design the outline of the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name: closeScan
+ *
+ * Description: free the memo space of this scan
+ *
+ * Parameters: RM_ScanHandle *scan
+ *
+ * Return: RC
+ *
+ * Author: liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ * 03/19/2016    liuzhipeng first time to implement the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getRecordSize
+ *
+ * Description: get the size of record described by "schema"
+ *
+ * Parameters: Schema *schema
+ *
+ * Return: int
+ *
+ * Author: liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ * 03/19/2016    liuzhipeng first time to implement the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name: createSchema
+ *
+ * Description: create a new schema described by the parameters
+ *
+ * Parameters: int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys
+ *
+ * Return: Schema
+ *
+ * Author: liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ * 03/19/2016    liuzhipeng first time to implement the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name: freeSchema
+ *
+ * Description: free the memo space of this schema
+ *
+ * Parameters: Schema *schema
+ *
+ * Return: RC
+ *
+ * Author: liu zhipeng
+ *
+ * History:
+ *      Date            Name                        Content
+ * 03/19/2016    liuzhipeng first time to implement the function
+***************************************************************/
+
+/***************************************************************
+ * Function Name: createRecord
+ *
+ * Description: Create a record by the schema
+ *
+ * Parameters: Record *record, Schema *schema
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: freeRecord
+ *
+ * Description: Free the space of a record
+ *
+ * Parameters: Record *record
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getAttr
+ *
+ * Description: Get the value of a record
+ *
+ * Parameters: Record *record, Schema *schema, int attrNum, Value **value
+ *
+ * Return: RC, value
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: setAttr
+ *
+ * Description: Set the value of a record
+ *
+ * Parameters: Record *record, Schema *schema, int attrNum, Value *value
+ *
+ * Return: RC
+ *
+ * Author: Xincheng Yang
+ *
+ * History:
+ *      Date            Name                        Content
+ *   2016/3/18      Xincheng Yang             first time to implement the function
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: addPageMetadataBlock
+ *
+ * Description: add block that contain pages metadata
+ *
+ * Parameters: SM_FileHandle *fh
+ *
+ * Return: RC
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/22/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getFileMetaDataSize
+ *
+ * Description: get file metadata size from file
+ *
+ * Parameters: BM_BufferPool *bm
+ *
+ * Return: int
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/23           Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: recordCostSlot
+ *
+ * Description: get record size(slot) from file
+ *
+ * Parameters: BM_BufferPool *bm
+ *
+ * Return: int
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+/***************************************************************
+ * Function Name: getSlotSize
+ *
+ * Description: get slot size from file
+ *
+ * Parameters: BM_BufferPool *bm
+ *
+ * Return: int
+ *
+ * Author: Xiaoliang Wu
+ *
+ * History:
+ *      Date            Name                        Content
+ *      03/23/16        Xiaoliang Wu                Complete.
+ *
+***************************************************************/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    6. Additional error codes: of all additional error codes  
+
+RC_RM_RECORD_NOT_EXIST 206 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    7. Data structure: main data structure used
+
+typedef enum DataType {
+  DT_INT = 0,
+  DT_STRING = 1,
+  DT_FLOAT = 2,
+  DT_BOOL = 3
+} DataType;
+
+typedef struct Value {
+  DataType dt;
+  union v {
+    int intV;
+    char *stringV;
+    float floatV;
+    bool boolV;
+  } v;
+} Value;
+
+typedef struct RID {
+  int page;
+  int slot;
+} RID;
+
+typedef struct Record
+{
+  RID id;
+  char *data;
+} Record;
+
+// information of a table schema: its attributes, datatypes, 
+typedef struct Schema
+{
+  int numAttr;
+  char **attrNames;
+  DataType *dataTypes;
+  int *typeLength;
+  int *keyAttrs;
+  int keySize;
+} Schema;
+
+// TableData: Management Structure for a Record Manager to handle one relation
+typedef struct RM_TableData
+{
+  char *name;
+  Schema *schema;
+  BM_BufferPool *bm;
+  SM_FileHandle *fh;
+} RM_TableData;
+
+typedef struct RM_ScanHandle
+{
+  RM_TableData *rel;
+  int currentPage;
+  int currentSlot;
+  Expr *expr;
+  void *mgmtData;
+} RM_ScanHandle;
+
+// datatype for arguments of expressions used in conditions
+typedef enum ExprType {
+  EXPR_OP,
+  EXPR_CONST,
+  EXPR_ATTRREF
+} ExprType;
+
+typedef struct Expr {
+  ExprType type;
+  union expr {
+    Value *cons;
+    int attrRef;
+    struct Operator *op;
+  } expr;
+} Expr;
+
+// comparison operators
+typedef enum OpType {
+  OP_BOOL_AND,
+  OP_BOOL_OR,
+  OP_BOOL_NOT,
+  OP_COMP_EQUAL,
+  OP_COMP_SMALLER
+} OpType;
+
+typedef struct Operator {
+  OpType type;
+  Expr **args;
+} Operator;
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    8. Extra credit: of all extra credits 
+
+  No extra credit.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    9. Additional files: of all additional files 
+
+  No additioinal files.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    10. Test cases: of all additional test cases added 
+
+  Test case:
+  testInsertManyRecords()
+  testRecords()
+  testCreateTableAndInsert()
+  testUpdateTable()
+  testScans()
+  testScansTwo()
+  testMultipleScans()
+         
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    11. Problems solved  
+
+  Implement all required functions and additional test case.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    12. Problems to be solved
+
+  This program could be optimized.
