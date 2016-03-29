@@ -367,6 +367,7 @@ RC openTable (RM_TableData *rel, char *name) {
 RC closeTable (RM_TableData *rel) {
     freeSchema(rel->schema);
     shutdownBufferPool(rel->bm);
+    free(rel->bm);
     return RC_OK;
 }
 

@@ -108,7 +108,7 @@ RC createPageFile(char *fileName){
     char fill[PAGE_SIZE];
     int write_result;
 
-    fp = fopen(fileName,"w");
+    fp = fopen(fileName,"w+");
 
     if(fp == NULL){
         fclose(fp);
@@ -173,7 +173,8 @@ RC openPageFile (char *fileName, SM_FileHandle *fHandle){
     fHandle->fileName = fileName;
     fHandle->totalNumPages = (int)(size % PAGE_SIZE + 1);
     fHandle->curPagePos = 0;
-
+    
+    fclose(fp);
     return RC_OK;
 
 }
