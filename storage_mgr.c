@@ -171,7 +171,11 @@ RC openPageFile (char *fileName, SM_FileHandle *fHandle){
     }
 
     fHandle->fileName = fileName;
-    fHandle->totalNumPages = (int)(size % PAGE_SIZE + 1);
+    if(size%PAGE_SIZE == 0){
+    	fHandle->totalNumPages = (size / PAGE_SIZE);
+    }else{
+    	fHandle->totalNumPages = (size/PAGE_SIZE +1);
+    }
     fHandle->curPagePos = 0;
     
     fclose(fp);
