@@ -122,7 +122,6 @@ RC createTable (char *name, Schema *schema) {
     charSchema = serializeSchema(schema);
 
     RC_flag = ensureCapacity(fileMetadataSize, &fh);
-
     if (RC_flag != RC_OK) {
         RC_flag = closePageFile(&fh);
         return RC_flag;
@@ -154,7 +153,6 @@ RC createTable (char *name, Schema *schema) {
     }
 
     RC_flag = addPageMetadataBlock(&fh);
-
     if (RC_flag != RC_OK) {
         RC_flag = closePageFile(&fh);
         return RC_flag;
@@ -183,7 +181,7 @@ RC createTable (char *name, Schema *schema) {
 
 RC openTable (RM_TableData *rel, char *name) {
     RC RC_flag;
-    SM_FileHandle fh;
+    SM_FileHandle *fh = (SM_FileHandle*)calloc(1, sizeof(SM_FileHandle));
     BM_BufferPool *bm = MAKE_POOL();
     BM_PageHandle *h = MAKE_PAGE_HANDLE();
 
@@ -202,7 +200,9 @@ RC openTable (RM_TableData *rel, char *name) {
     char * temp;
 
     // open file and initial buffer pool
-    RC_flag = openPageFile(name, &fh);
+    RC_flag = openPageFile(name, fh);
+
+
     if (RC_flag != RC_OK) {
         return RC_flag;
     }
@@ -342,7 +342,7 @@ RC openTable (RM_TableData *rel, char *name) {
     rel->name = name;
     rel->schema = schema;
     rel->bm = bm;
-    rel->fh = &fh;
+    rel->fh = fh;
 
     return RC_OK;
 }
@@ -368,6 +368,7 @@ RC closeTable (RM_TableData *rel) {
     freeSchema(rel->schema);
     shutdownBufferPool(rel->bm);
     free(rel->bm);
+    free(rel->fh);
     return RC_OK;
 }
 
@@ -443,7 +444,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     int offset = 0;
     int r_current_num, numTuples;
     bool r_stat = true;
-        
+       
     // Find out the target page and slot at the end.
     do {
         pinPage(rel->bm, h, p_mata_index);
@@ -454,13 +455,13 @@ RC insertRecord (RM_TableData *rel, Record *record) {
             break;
         }
     } while(true);
-    
+
     // Find out the target meta index and record number of the page.
     do {
         memcpy(&r_current_num, h->data + offset + sizeof(int), sizeof(int));
         offset += 2*sizeof(int);
     } while (r_current_num == PAGE_SIZE / 256);
-    
+
     // If no page exist, add new page.
     if(r_current_num == -1){       
         // If page mata is full, add new matadata block.
@@ -472,26 +473,32 @@ RC insertRecord (RM_TableData *rel, Record *record) {
             pinPage(rel->bm, h, rel->fh->totalNumPages-1);  // Pin the new page.
             offset = 2*sizeof(int);
         }
+        memcpy(h->data + offset - 2*sizeof(int), &rel->fh->totalNumPages, sizeof(int));  // set page number.
         appendEmptyBlock(rel->fh);
         r_current_num = 0;                                  
-        memcpy(h->data + offset - 2*sizeof(int), rel->fh->totalNumPages-1, sizeof(int));   // set page number.
     } 
-    
+
     // Read record->id and set record number add 1 in meta data.
     memcpy(&record->id.page, h->data + offset - 2*sizeof(int), sizeof(int));   // Set record->id page number.
     record->id.slot = r_current_num * r_slotnum;                                // Set record->id slot.
     r_current_num++;                                
     memcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
+    // int c;
+    // for(int i=0; i<PAGE_SIZE/sizeof(int);i++){
+    //     memcpy(&c, h->data + i * sizeof(int), sizeof(int));
+    //     if(i<20){
+    //             printf("%d\n", c);
+    //     }
+    // }
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);              // unpin meta page.
-    
+
     // Insert record header and record data into page.
     pinPage(rel->bm, h, record->id.page);
     memcpy(h->data + 256*record->id.slot, &r_stat, sizeof(bool));   // Record header is a del_flag 
     memcpy(h->data + 256*record->id.slot + sizeof(bool), record->data, r_size); // Record body is values.
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);
-    
     // Tuple number add 1.
     pinPage(rel->bm, h, 0);
     memcpy(&numTuples, h->data + 3 * sizeof(int), sizeof(int));
