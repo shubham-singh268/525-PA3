@@ -446,7 +446,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     // Find out the target page and slot at the end.
     do {
         pinPage(rel->bm, h, p_mata_index);
-        mempcpy(&p_mata_index, h->data + PAGE_SIZE - sizeof(int), sizeof(int));
+        memcpy(&p_mata_index, h->data + PAGE_SIZE - sizeof(int), sizeof(int));
         if(p_mata_index != -1){
             unpinPage(rel->bm, h);
         } else {
@@ -456,7 +456,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     
     // Find out the target meta index and record number of the page.
     do {
-        mempcpy(&r_current_num, h->data + offset + sizeof(int), sizeof(int));
+        memcpy(&r_current_num, h->data + offset + sizeof(int), sizeof(int));
         offset += 2*sizeof(int);
     } while (r_current_num == PAGE_SIZE / 256);
     
@@ -464,7 +464,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
     if(r_current_num == -1){       
         // If page mata is full, add new matadata block.
         if(offset == PAGE_SIZE){       
-            mempcpy(h->data + PAGE_SIZE - sizeof(int), &rel->fh->totalNumPages, sizeof(int));   // Link into new meta data page. 
+            memcpy(h->data + PAGE_SIZE - sizeof(int), &rel->fh->totalNumPages, sizeof(int));   // Link into new meta data page. 
             addPageMetadataBlock(rel->fh);
             markDirty(rel->bm, h);
             unpinPage(rel->bm, h);      // Unpin the last meta page.
@@ -473,14 +473,14 @@ RC insertRecord (RM_TableData *rel, Record *record) {
         }
         appendEmptyBlock(rel->fh);
         r_current_num = 0;                                  
-        mempcpy(h->data + offset - 2*sizeof(int), rel->fh->totalNumPages-1, sizeof(int));   // set page number.
+        memcpy(h->data + offset - 2*sizeof(int), rel->fh->totalNumPages-1, sizeof(int));   // set page number.
     } 
     
     // Read record->id and set record number add 1 in meta data.
-    mempcpy(&record->id.page, h->data + offset - 2*sizeof(int), sizeof(int));   // Set record->id page number.
+    memcpy(&record->id.page, h->data + offset - 2*sizeof(int), sizeof(int));   // Set record->id page number.
     record->id.slot = r_current_num * r_slotnum;                                // Set record->id slot.
     r_current_num++;                                
-    mempcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
+    memcpy(h->data + offset + sizeof(int), &r_current_num, sizeof(int));   // Set record number++ into meta data.
     markDirty(rel->bm, h);
     unpinPage(rel->bm, h);              // unpin meta page.
     
